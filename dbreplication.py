@@ -81,16 +81,18 @@ def create_table_load_data(start_idx, num_tables):
 
 def autosetup_replica(src_table_name, num_replica):
     print "Creating autosetup replica"
-    src_suffix = src_table_name[g_zfill_repl_width:]
+    # src_suffix = src_table_name[g_zfill_repl_width:]
+    src_suffix = src_table_name.translate(None, '/')
     for i in range(0, num_replica):
-        print "Creating replica " + g_replica_path + g_repltable_prefix + src_suffix + "_" + str(i)
-        auto_setup_cmd = "maprcli table replica autosetup -path " + src_table_name + " -replica " + g_replica_path + g_repltable_prefix + src_suffix + "_" + str(i) + " -directcopy true"
+        print "Creating replica " + g_replica_path + g_repltable_prefix + src_suffix + "_slave" + str(i)
+        auto_setup_cmd = "maprcli table replica autosetup -path " + src_table_name + " -replica " + g_replica_path + g_repltable_prefix + src_suffix + "_slave" + str(i) + " -directcopy true"
         print auto_setup_cmd
         os.system(auto_setup_cmd)
 
 def autosetup_intra_cluster_replica(src_table_name, num_replica):
     print "Intra cluster replica autosetup"
-    src_suffix = src_table_name[g_zfill_repl_width:]
+    # src_suffix = src_table_name[g_zfill_repl_width:]
+    src_suffix = src_table_name.translate(None, '/')
     for i in range(0, num_replica):
         print "Creating Intra cluster replica " +  g_local_repltable_prefix + src_suffix + "_" + str(i)
         auto_setup_cmd = "maprcli table replica autosetup -path " + src_table_name + " -replica " + g_local_repltable_prefix + src_suffix + "_" + str(i) + " -directcopy true"
@@ -99,10 +101,11 @@ def autosetup_intra_cluster_replica(src_table_name, num_replica):
 
 def multimaster_autosetup_replica(src_table_name, num_replica):
     print "Creating multimaster autosetup replica"
-    src_suffix = src_table_name[g_zfill_repl_width:]
+    # src_suffix = src_table_name[g_zfill_repl_width:]
+    src_suffix = src_table_name.translate(None, '/')
     for i in range(0, num_replica):
-        print "Creating Multimaster replica " + g_replica_path + g_mm_repltable_prefix + src_suffix + "_" + str(i)
-        auto_setup_cmd = "maprcli table replica autosetup -path " + src_table_name + " -replica " + g_replica_path + g_mm_repltable_prefix + src_suffix + "_" + str(i) + " -directcopy true -multimaster true"
+        print "Creating Multimaster replica " + g_replica_path + g_mm_repltable_prefix + src_suffix + "_slave" + str(i)
+        auto_setup_cmd = "maprcli table replica autosetup -path " + src_table_name + " -replica " + g_replica_path + g_mm_repltable_prefix + src_suffix + "_slave" + str(i) + " -directcopy true -multimaster true"
         print auto_setup_cmd
         os.system(auto_setup_cmd)
     # autosetup_replica(src_table_name, num_replica)
@@ -112,7 +115,7 @@ def multimaster_autosetup_replica(src_table_name, num_replica):
     #     os.system(auto_setup_cmd)
 
 
-def try_factset_scenario(start_idx, num_tables):
+def try_seq_scenario(start_idx, num_tables):
     for i in range(0, num_tables):
         curr_table_name = g_volume_prefix + g_table_prefix + str(start_idx+i).zfill(g_zfill_width)
         create_single_table(curr_table_name)
@@ -122,7 +125,7 @@ def try_factset_scenario(start_idx, num_tables):
         multimaster_autosetup_replica(curr_table_name, g_num_replica_tables)
 
 
-def try_bulk_factset_scenario(start_idx, num_tables):
+def try_bulk_seq_scenario(start_idx, num_tables):
 
     list_of_tables = [g_volume_prefix + g_table_prefix + str(start_idx+i).zfill(g_zfill_width) for i in range(0, num_tables)]
     for curr_table_name in list_of_tables:
@@ -184,7 +187,7 @@ def usage():
     print "\t-as <srctable> <num_replica>           - Autosetup replica"
     print "\t-al <srctable> <num_replica>           - Autosetup intracluster replica"
     print "\t-mm <srctable> <num_replica>           - Autosetup multimaster replica"
-    print "\t-factset <start_index> <num_tables>    - Factset scenario"
+    print "\t-seq <start_index> <num_tables>    - seq scenario"
     print "\t-bulkset <start_index> <num_tables>    - Autosetup replica in bulk"
     print "\n\t-stress <start_index_vol> <num_vol> <start_index_table> <num_tables>       - Autosetup replica for stress"
     print "\t-stressbulk <start_index_vol> <num_vol> <start_index_table> <num_tables>   - Autosetup replica in bulk for stress"
@@ -258,21 +261,21 @@ if __name__ == "__main__":
             exit(-1)
         create_volumes_and_tables(int(sys.argv[2]), int(sys.argv[3]), int(sys.argv[4]), int(sys.argv[5]))
 
-    elif sys.argv[1] == "-factset":
-        print "Factset scenario autosetup"
+    elif sys.argv[1] == "-seq":
+        print "seq scenario autosetup"
         if len(sys.argv[2:]) < 2:
             print "Error: Please provide right arguments"
             usage()
             exit(-1)
-        try_factset_scenario(int(sys.argv[2]), int(sys.argv[3]))
+        try_seq_scenario(int(sys.argv[2]), int(sys.argv[3]))
 
     elif sys.argv[1] == "-bulkset":
-        print "Factset scenario bulk autosetup"
+        print "seq scenario bulk autosetup"
         if len(sys.argv[2:]) < 2:
             print "Error: Please provide right arguments"
             usage()
             exit(-1)
-        try_bulk_factset_scenario(int(sys.argv[2]), int(sys.argv[3]))
+        try_bulk_seq_scenario(int(sys.argv[2]), int(sys.argv[3]))
 
     elif sys.argv[1] == "-stress":
         print "Create volume, table, autosetup replica in bulk"
