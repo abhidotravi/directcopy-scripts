@@ -49,22 +49,39 @@ def create_volumes_and_tables(start_idx_vol, num_volumes, start_idx_table, num_t
 
     return list_of_tables
 
+def create_volume(volume_path_prefix, start_idx, num_volumes):
+    """
+    Creates volume(s) with specified path as prefix.
+    :param volume_path_prefix:
+    :param start_idx:
+    :param num_volumes:
+    :return:
+    """
+    list_of_volumes = [volume_path_prefix + str(start_idx + i).zfill(g_zfill_width) for i in range(0, num_volumes)]
+    logging.debug(list_of_volumes)
+    for vol in list_of_volumes:
+        create_vol_cmd = "maprcli volume create -name " + vol[1:] + " -path " + vol + " -replication 3 -topology /data"
+        logging.info(create_vol_cmd)
+        os.system(create_vol_cmd)
+    return list_of_volumes
 
 def create_table(table_path_prefix, start_idx=1, num_tables=1):
     """
-    Creates a table with specified path as prefix. This utility method can be used
-    to create multiple tables.
-    :param table_path_prefix: Table path that serves as a prefix
-    :param start_idx: Start index of table (default = 1)
-    :param num_tables: Number of table to create (default = 1)
-    :return:
+    Creates table(s) with specified path as prefix.
+    :param table_path_prefix: table path that serves as a prefix
+    :param start_idx: start index of table (default = 1)
+    :param num_tables: number of table to create (default = 1)
+    :return: list of table names created
     """
-    for i in range(start_idx, start_idx + num_tables):
-        logging.debug("Creating table " + table_path_prefix + str(i).zfill(g_zfill_width))
+
+    list_of_tables = [table_path_prefix + str(start_idx + i).zfill(g_zfill_width) for i in range(0, num_tables)]
+    logging.debug(list_of_tables)
+    for table_name in list_of_tables:
         #create_cmd = "maprcli table create -path " + g_volume_prefix + g_table_prefix + str(i).zfill(g_zfill_width)
-        create_cmd = "maprcli table create -path " + table_path_prefix + str(i).zfill(g_zfill_width)
+        create_cmd = "maprcli table create -path " + table_name
         logging.info(create_cmd)
         os.system(create_cmd)
+    return list_of_tables
 
 
 def create_single_table(table_name):

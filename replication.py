@@ -33,7 +33,7 @@ if __name__ == "__main__":
     #create volume command
     create_vol_parser = create_sub_parser.add_parser('volume', help='Create volume / volumes')
     create_vol_parser.add_argument('volumeprefix', help='Prefix for volume path')
-    create_vol_parser.add_argument('-numvols', type=int, default=1, help='Number of volumes')
+    create_vol_parser.add_argument('-numvolumes', type=int, default=1, help='Number of volumes')
     create_vol_parser.add_argument('-startidx', type=int, default=1, help='Start index of table')
 
     #delete command
@@ -49,7 +49,7 @@ if __name__ == "__main__":
     #delete volume command
     delete_vol_parser = delete_sub_parser.add_parser('volume', help='Delete volume / volumes')
     delete_vol_parser.add_argument('volumeprefix', help='Prefix for volume path')
-    delete_vol_parser.add_argument('-numvols', type=int, default=1, help='Number of volumes')
+    delete_vol_parser.add_argument('-numvolumes', type=int, default=1, help='Number of volumes')
     delete_vol_parser.add_argument('-startidx', type=int, default=1, help='Start index of table')
 
     #autopsetup command
@@ -75,7 +75,11 @@ if __name__ == "__main__":
 
     if args.cmd_name == 'create':
         logging.debug('Create command')
-        utils.create_table(table_path_prefix=args.tableprefix, start_idx=args.startidx, num_tables=args.numtables)
-        
+        if args.obj_type == 'table':
+            utils.create_table(table_path_prefix=args.tableprefix, start_idx=args.startidx, num_tables=args.numtables)
+        elif args.obj_type == 'volume':
+            utils.create_volume(volume_path_prefix=args.volumeprefix, start_idx=args.startidx, num_volumes=args.numvolumes)
+    # elif args.cmd_name
+
 
 
