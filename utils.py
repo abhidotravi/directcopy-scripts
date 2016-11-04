@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-#Created by aravi
+# Created by aravi
 
 import json
 import os
@@ -10,13 +10,14 @@ import re
 import csv
 import subprocess
 from pprint import pprint
+import logging
 
 g_volume_prefix = "/dbvolume"
 g_table_prefix = "/stable"
 g_replvolume_prefix = "/replvol"
 g_repltable_prefix = g_replvolume_prefix + "/rtable"
-g_local_repltable_prefix ="/dbvolume/lrtable"
-g_mm_repltable_prefix ="/replvol/mmrtable"
+g_local_repltable_prefix = "/dbvolume/lrtable"
+g_mm_repltable_prefix = "/replvol/mmrtable"
 g_replica_path = "/mapr/zoom"
 
 g_default_load_rows = 100000
@@ -49,12 +50,22 @@ def create_volumes_and_tables(start_idx_vol, num_volumes, start_idx_table, num_t
     return list_of_tables
 
 
-
-def create_table(start_idx, num_tables):
+def create_table(table_path_prefix, start_idx=1, num_tables=1):
+    """
+    Creates a table with specified path as prefix. This utility method can be used
+    to create multiple tables.
+    :param table_path_prefix: Table path that serves as a prefix
+    :param start_idx: Start index of table (default = 1)
+    :param num_tables: Number of table to create (default = 1)
+    :return:
+    """
     for i in range(start_idx, start_idx + num_tables):
-        print "Creating table " + g_volume_prefix + g_table_prefix + str(i).zfill(g_zfill_width)
-        create_cmd = "maprcli table create -path " + g_volume_prefix + g_table_prefix + str(i).zfill(g_zfill_width)
+        logging.debug("Creating table " + table_path_prefix + str(i).zfill(g_zfill_width))
+        #create_cmd = "maprcli table create -path " + g_volume_prefix + g_table_prefix + str(i).zfill(g_zfill_width)
+        create_cmd = "maprcli table create -path " + table_path_prefix + str(i).zfill(g_zfill_width)
+        logging.info(create_cmd)
         os.system(create_cmd)
+
 
 def create_single_table(table_name):
     print "Creating single table " + table_name
@@ -68,10 +79,13 @@ def delete_table(start_idx, num_tables):
         create_cmd = "maprcli table delete -path " + g_volume_prefix + g_table_prefix + str(i)
         os.system(create_cmd)
 
+
 def load_test(table_name):
     print "Loading data on to table"
-    load_cmd = "/opt/mapr/server/tools/loadtest -mode put -table " + table_name + " -isjson false -numrows " + str(g_default_load_rows) + " -numfamilies " + str(g_num_families)
+    load_cmd = "/opt/mapr/server/tools/loadtest -mode put -table " + table_name + " -isjson false -numrows " + str(
+        g_default_load_rows) + " -numfamilies " + str(g_num_families)
     os.system(load_cmd)
+
 
 def create_table_load_data(start_idx, num_tables):
     create_table(start_idx, num_tables)
@@ -86,19 +100,23 @@ def autosetup_replica(src_table_name, num_replica):
     src_suffix = src_table_name.translate(None, '/')
     for i in range(0, num_replica):
         print "Creating replica " + g_replica_path + g_repltable_prefix + src_suffix + "_slave" + str(i)
-        auto_setup_cmd = "maprcli table replica autosetup -path " + src_table_name + " -replica " + g_replica_path + g_repltable_prefix + src_suffix + "_slave" + str(i) + " -directcopy true"
+        auto_setup_cmd = "maprcli table replica autosetup -path " + src_table_name + " -replica " + g_replica_path + g_repltable_prefix + src_suffix + "_slave" + str(
+            i) + " -directcopy true"
         print auto_setup_cmd
         os.system(auto_setup_cmd)
+
 
 def autosetup_intra_cluster_replica(src_table_name, num_replica):
     print "Intra cluster replica autosetup"
     # src_suffix = src_table_name[g_zfill_repl_width:]
     src_suffix = src_table_name.translate(None, '/')
     for i in range(0, num_replica):
-        print "Creating Intra cluster replica " +  g_local_repltable_prefix + src_suffix + "_" + str(i)
-        auto_setup_cmd = "maprcli table replica autosetup -path " + src_table_name + " -replica " + g_local_repltable_prefix + src_suffix + "_slave" + str(i) + " -directcopy true"
+        print "Creating Intra cluster replica " + g_local_repltable_prefix + src_suffix + "_" + str(i)
+        auto_setup_cmd = "maprcli table replica autosetup -path " + src_table_name + " -replica " + g_local_repltable_prefix + src_suffix + "_slave" + str(
+            i) + " -directcopy true"
         print auto_setup_cmd
         os.system(auto_setup_cmd)
+
 
 def multimaster_autosetup_replica(src_table_name, num_replica):
     print "Creating multimaster autosetup replica"
@@ -106,19 +124,20 @@ def multimaster_autosetup_replica(src_table_name, num_replica):
     src_suffix = src_table_name.translate(None, '/')
     for i in range(0, num_replica):
         print "Creating Multimaster replica " + g_replica_path + g_mm_repltable_prefix + src_suffix + "_slave" + str(i)
-        auto_setup_cmd = "maprcli table replica autosetup -path " + src_table_name + " -replica " + g_replica_path + g_mm_repltable_prefix + src_suffix + "_slave" + str(i) + " -directcopy true -multimaster true"
+        auto_setup_cmd = "maprcli table replica autosetup -path " + src_table_name + " -replica " + g_replica_path + g_mm_repltable_prefix + src_suffix + "_slave" + str(
+            i) + " -directcopy true -multimaster true"
         print auto_setup_cmd
         os.system(auto_setup_cmd)
-    # autosetup_replica(src_table_name, num_replica)
-    # src_suffix = src_table_name[-1]
-    # for i in range(0, ((num_replica/2) + 1)):
-    #     auto_setup_cmd = "maprcli table replica autosetup -path " + g_replica_path + g_repltable_prefix + src_suffix + "_" + str(i) + " -replica " + src_table_name + " -directcopy true"
-    #     os.system(auto_setup_cmd)
+        # autosetup_replica(src_table_name, num_replica)
+        # src_suffix = src_table_name[-1]
+        # for i in range(0, ((num_replica/2) + 1)):
+        #     auto_setup_cmd = "maprcli table replica autosetup -path " + g_replica_path + g_repltable_prefix + src_suffix + "_" + str(i) + " -replica " + src_table_name + " -directcopy true"
+        #     os.system(auto_setup_cmd)
 
 
 def try_seq_scenario(start_idx, num_tables):
     for i in range(0, num_tables):
-        curr_table_name = g_volume_prefix + g_table_prefix + str(start_idx+i).zfill(g_zfill_width)
+        curr_table_name = g_volume_prefix + g_table_prefix + str(start_idx + i).zfill(g_zfill_width)
         create_single_table(curr_table_name)
         load_test(curr_table_name)
         autosetup_replica(curr_table_name, g_num_replica_tables)
@@ -127,8 +146,8 @@ def try_seq_scenario(start_idx, num_tables):
 
 
 def try_bulk_seq_scenario(start_idx, num_tables):
-
-    list_of_tables = [g_volume_prefix + g_table_prefix + str(start_idx+i).zfill(g_zfill_width) for i in range(0, num_tables)]
+    list_of_tables = [g_volume_prefix + g_table_prefix + str(start_idx + i).zfill(g_zfill_width) for i in
+                      range(0, num_tables)]
     for curr_table_name in list_of_tables:
         create_single_table(curr_table_name)
         load_test(curr_table_name)
@@ -137,6 +156,7 @@ def try_bulk_seq_scenario(start_idx, num_tables):
         autosetup_replica(curr_table_name, g_num_replica_tables)
         autosetup_intra_cluster_replica(curr_table_name, g_num_replica_tables)
         multimaster_autosetup_replica(curr_table_name, g_num_replica_tables)
+
 
 def stress_test_bulk(start_idx_vol, num_volumes, start_idx_table, num_tables):
     """
@@ -153,7 +173,6 @@ def stress_test_bulk(start_idx_vol, num_volumes, start_idx_table, num_tables):
         multimaster_autosetup_replica(table, g_num_replica_tables)
 
 
-
 def stress_test_basic(start_idx_vol, num_volumes, start_idx_table, num_tables):
     """
     Used for stress / longevity tests. Creates multiple volumes with multiple tables.
@@ -165,6 +184,7 @@ def stress_test_basic(start_idx_vol, num_volumes, start_idx_table, num_tables):
         autosetup_replica(table, g_num_replica_tables)
         autosetup_intra_cluster_replica(table, g_num_replica_tables)
         multimaster_autosetup_replica(table, g_num_replica_tables)
+
 
 def autosetup_on_tables_in_volume(volumename):
     """
@@ -181,6 +201,8 @@ def autosetup_on_tables_in_volume(volumename):
 
 
 '''Bunch of Utility Methods'''
+
+
 def get_replica_stats(srctable, stats):
     """
     Appends the copytable percentage for replicas of a srctable
@@ -199,7 +221,7 @@ def get_replica_stats(srctable, stats):
         print "ERROR:", cmd_out
         return
 
-    #There was no exception and result is not null
+    # There was no exception and result is not null
     json_out = json.loads(cmd_out)
 
     result = "src: " + srctable
@@ -219,14 +241,10 @@ def get_replica_stats(srctable, stats):
 
 
 
-    # data = result_json["data"]
-    # for i in xrange(0, len(json_data["data"]))
-    # pprint(json_data)
-    # copytable_percent = json_data["copyTableCompletionPercentage"]
-
-
-
-
+        # data = result_json["data"]
+        # for i in xrange(0, len(json_data["data"]))
+        # pprint(json_data)
+        # copytable_percent = json_data["copyTableCompletionPercentage"]
 
 
 def usage():
@@ -351,7 +369,6 @@ if __name__ == "__main__":
             print "Error: Please provide right arguments"
             usage()
             exit(-1)
-        get_copytable_percentage(sys.argv[2], sys.argv[3])
-
+        get_replica_stats(sys.argv[2], sys.argv[3])
     else:
         usage()
