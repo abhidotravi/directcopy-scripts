@@ -34,7 +34,7 @@ if __name__ == "__main__":
     create_vol_parser = create_sub_parser.add_parser('volume', help='Create volume / volumes')
     create_vol_parser.add_argument('volumeprefix', help='Prefix for volume path')
     create_vol_parser.add_argument('-numvolumes', type=int, default=1, help='Number of volumes')
-    create_vol_parser.add_argument('-startidx', type=int, default=1, help='Start index of table')
+    create_vol_parser.add_argument('-startidx', type=int, default=1, help='Start index of volume')
 
     #delete command
     delete_parser = sub_parsers.add_parser('delete')
@@ -50,7 +50,7 @@ if __name__ == "__main__":
     delete_vol_parser = delete_sub_parser.add_parser('volume', help='Delete volume / volumes')
     delete_vol_parser.add_argument('volumeprefix', help='Prefix for volume path')
     delete_vol_parser.add_argument('-numvolumes', type=int, default=1, help='Number of volumes')
-    delete_vol_parser.add_argument('-startidx', type=int, default=1, help='Start index of table')
+    delete_vol_parser.add_argument('-startidx', type=int, default=1, help='Start index of volume')
 
     #autopsetup command
     autosetup_parser = sub_parsers.add_parser('autosetup')
@@ -79,6 +79,22 @@ if __name__ == "__main__":
             utils.create_table(table_path_prefix=args.tableprefix, start_idx=args.startidx, num_tables=args.numtables)
         elif args.obj_type == 'volume':
             utils.create_volume(volume_path_prefix=args.volumeprefix, start_idx=args.startidx, num_volumes=args.numvolumes)
+        else:
+            logging.error('Unrecognized object. Cannot create.')
+            sys.exit(-1)
+    elif  args.cmd_name == 'delete':
+        logging.debug('Delete command')
+        if args.obj_type == 'table':
+            utils.delete_table(table_path_prefix=args.tableprefix, start_idx=args.startidx, num_tables=args.numtables)
+        elif args.obj_type == 'volume':
+            utils.delete_volume(volume_path_prefix=args.volumeprefix, start_idx=args.startidx, num_volumes=args.numvolumes)
+        else:
+            logging.error('Unrecognized object. Cannot create.')
+            sys.exit(-1)
+    elif args.cmd_name == 'autosetup':
+        logging.debug('Autosetup command')
+        if args.obj_type == 'table':
+            utils.autosetup_replica()
     # elif args.cmd_name
 
 

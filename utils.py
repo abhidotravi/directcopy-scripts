@@ -52,6 +52,22 @@ def create_volumes_and_tables(start_idx_vol, num_volumes, start_idx_table, num_t
 def create_volume(volume_path_prefix, start_idx, num_volumes):
     """
     Creates volume(s) with specified path as prefix.
+    :param volume_path_prefix: volume mount path (will be used as prefix for volume name)
+    :param start_idx: start index appended to volume prefix
+    :param num_volumes: number of volumes to be created
+    :return: list of volume paths created
+    """
+    list_of_volumes = [volume_path_prefix + str(start_idx + i).zfill(g_zfill_width) for i in range(0, num_volumes)]
+    logging.debug(list_of_volumes)
+    for vol in list_of_volumes:
+        create_vol_cmd = "maprcli volume create -name " + vol[1:] + " -path " + vol + " -replication 3 -topology /data"
+        logging.info(create_vol_cmd)
+        os.system(create_vol_cmd)
+    return list_of_volumes
+
+def delete_volume(volume_path_prefix, start_idx, num_volumes):
+    """
+    Deletes volume(s) with specified path as prefix.
     :param volume_path_prefix:
     :param start_idx:
     :param num_volumes:
@@ -60,9 +76,9 @@ def create_volume(volume_path_prefix, start_idx, num_volumes):
     list_of_volumes = [volume_path_prefix + str(start_idx + i).zfill(g_zfill_width) for i in range(0, num_volumes)]
     logging.debug(list_of_volumes)
     for vol in list_of_volumes:
-        create_vol_cmd = "maprcli volume create -name " + vol[1:] + " -path " + vol + " -replication 3 -topology /data"
-        logging.info(create_vol_cmd)
-        os.system(create_vol_cmd)
+        delete_vol_cmd = "maprcli volume remove -name " + vol[1:] + " -force true"
+        logging.info(delete_vol_cmd)
+        os.system(delete_vol_cmd)
     return list_of_volumes
 
 def create_table(table_path_prefix, start_idx=1, num_tables=1):
@@ -81,6 +97,23 @@ def create_table(table_path_prefix, start_idx=1, num_tables=1):
         create_cmd = "maprcli table create -path " + table_name
         logging.info(create_cmd)
         os.system(create_cmd)
+    return list_of_tables
+
+def delete_table(table_path_prefix, start_idx=1, num_tables=1):
+    """
+    Deletes table(s) with specified path as prefix.
+    :param table_path_prefix: table path that serves as a prefix
+    :param start_idx: start index of table (default = 1)
+    :param num_tables: number of table to create (default = 1)
+    :return: list of table names deleted
+    """
+
+    list_of_tables = [table_path_prefix + str(start_idx + i).zfill(g_zfill_width) for i in range(0, num_tables)]
+    logging.debug(list_of_tables)
+    for table_name in list_of_tables:
+        delete_cmd = "maprcli table delete -path " + table_name
+        logging.info(delete_cmd)
+        os.system(delete_cmd)
     return list_of_tables
 
 
@@ -111,7 +144,15 @@ def create_table_load_data(start_idx, num_tables):
         load_test(g_volume_prefix + g_table_prefix + str(i))
 
 
-def autosetup_replica(src_table_name, num_replica):
+def autosetup_replica_table(src_table, replica_parent, num_replica=1, is_multimaster=False):
+    """
+    Sets up replica for a given table. Can specify multimaster option
+    :param src_table:
+    :param replica_parent:
+    :param num_replica:
+    :param is_multimaster:
+    :return:
+    """
     print "Creating autosetup replica"
     # src_suffix = src_table_name[g_zfill_repl_width:]
     src_suffix = src_table_name.translate(None, '/')
