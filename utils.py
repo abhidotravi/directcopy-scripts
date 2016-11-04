@@ -62,13 +62,6 @@ def delete_table(start_idx, num_tables):
         os.system(create_cmd)
 
 
-def load_test(table_name):
-    print "Loading data on to table"
-    load_cmd = "/opt/mapr/server/tools/loadtest -mode put -table " + table_name + " -isjson false -numrows " + str(
-        g_default_load_rows) + " -numfamilies " + str(g_num_families)
-    os.system(load_cmd)
-
-
 def create_table_load_data(start_idx, num_tables):
     create_table(start_idx, num_tables)
 
@@ -209,6 +202,25 @@ def get_tables_in_volume(volume_path):
         return result_list
     result_list = result.split()
     return result_list
+
+def load_table(table_name, num_cfs=1, num_cols=3, num_rows=100000, is_json=False):
+    """
+    Uses load test to load data on to the table
+    :param table_name:
+    :param num_cfs: number of cf to put the data across
+    :param num_cols: number of columns in each cf
+    :param num_rows: total number of rows to insert
+    :param is_json: puts data in to json table if specified
+    :return:
+    """
+    logging.debug("Loading data on to table")
+    load_cmd = "/opt/mapr/server/tools/loadtest -mode put -table " + table_name \
+               + " -numfamilies " + str(num_cfs) + " -numcols " + str(num_cols) \
+               + " -numrows " + str(num_rows)
+    if is_json is True:
+        load_cmd += " -isjson true"
+    logging.info(load_cmd)
+    os.system(load_cmd)
 
 def autosetup_intra_cluster_replica(src_table_name, num_replica):
     print "Intra cluster replica autosetup"
