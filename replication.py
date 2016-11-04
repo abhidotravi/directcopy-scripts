@@ -61,14 +61,14 @@ if __name__ == "__main__":
     autosetup_table_parser.add_argument('srcpath', help='Source table path')
     autosetup_table_parser.add_argument('replpath', help='Path to parent directory of replica table')
     autosetup_table_parser.add_argument('-numreplica', type=int, default=1, help='Number of replicas')
-    autosetup_table_parser.add_argument('-multimaster', type=bool, default=False, help="Setup Multimaster replica")
+    autosetup_table_parser.add_argument('-multimaster', action='store_true', help="Multimaster if specified")
 
     #autosetup volume command
     autosetup_vol_parser = autosetup_sub_parser.add_parser('volume', help='Create autosetup for tables in a volume')
     autosetup_vol_parser.add_argument('volumepath', help='Volume path')
     autosetup_vol_parser.add_argument('replpath', help='Path to parent directory of replica table')
     autosetup_vol_parser.add_argument('-numreplica', type=int, default=1, help='Number of replicas')
-    autosetup_vol_parser.add_argument('-multimaster', action='store_true', help="Setup Multimaster replica")
+    autosetup_vol_parser.add_argument('-multimaster', action='store_true', help="Multimaster is specified")
 
     args = parser.parse_args()
     print args
@@ -94,7 +94,9 @@ if __name__ == "__main__":
     elif args.cmd_name == 'autosetup':
         logging.debug('Autosetup command')
         if args.obj_type == 'table':
-            utils.autosetup_replica()
+            utils.autosetup_replica_table(src_table=args.srcpath, replica_parent=args.replpath, num_replica=args.numreplica, is_multimaster=args.multimaster)
+        elif args.obj_type == 'volume':
+            utils.autosetup_replica_volume(volume_path=args.volumepath, replica_parent=args.replpath, num_replica=args.numreplica, is_multimaster=args.multimaster)
     # elif args.cmd_name
 
 

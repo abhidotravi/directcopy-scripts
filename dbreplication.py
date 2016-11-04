@@ -351,7 +351,7 @@ if __name__ == "__main__":
             print "Error: Please provide right arguments"
             usage()
             exit(-1)
-        get_copytable_percentage(sys.argv[2], sys.argv[3])
+        #get_copytable_percentage(sys.argv[2], sys.argv[3])
 
     else:
         usage()
