@@ -22,7 +22,8 @@ if __name__ == "__main__":
                                         dest='cmd_name')
 
     #create command
-    create_parser = sub_parsers.add_parser('create')
+    create_parser = sub_parsers.add_parser('create',
+                                           help='Create table(s) / volume(s)')
     create_sub_parser = create_parser.add_subparsers(help='type',
                                                      dest='obj_type')
 
@@ -55,7 +56,8 @@ if __name__ == "__main__":
                                    help='Start index of volume (default: 1)')
 
     #delete command
-    delete_parser = sub_parsers.add_parser('delete')
+    delete_parser = sub_parsers.add_parser('delete',
+                                           help='Delete table(s) / volume(s)')
     delete_sub_parser = delete_parser.add_subparsers(help='type',
                                                      dest='obj_type')
 
@@ -88,7 +90,8 @@ if __name__ == "__main__":
                                    help='Start index of volume (default: 1)')
 
     #autopsetup command
-    autosetup_parser = sub_parsers.add_parser('autosetup')
+    autosetup_parser = sub_parsers.add_parser('autosetup',
+                                              help='Autosetup replica for table / tables in volume')
     autosetup_sub_parser = autosetup_parser.add_subparsers(help='type',
                                                            dest='obj_type')
 
@@ -123,7 +126,8 @@ if __name__ == "__main__":
                                       help="Multimaster is specified")
 
     #load command
-    load_parser = sub_parsers.add_parser('load')
+    load_parser = sub_parsers.add_parser('load',
+                                         help='load data on to table / tables in volume')
     load_sub_parser = load_parser.add_subparsers(help='type',
                                                  dest='obj_type')
 
@@ -147,6 +151,28 @@ if __name__ == "__main__":
     load_table_parser.add_argument('-json',
                                    action='store_true',
                                    help="Json table if specified")
+
+
+    #load tables in volume command
+    load_volume_parser = load_sub_parser.add_parser('volume',
+                                                    help='Load data on to tables in a volume')
+    load_volume_parser.add_argument('volumepath',
+                                    help='Volume path ')
+    load_volume_parser.add_argument('-numcfs',
+                                    type=int,
+                                    default=1,
+                                    help='Number of CFs to create (default: 1)')
+    load_volume_parser.add_argument('-numcols',
+                                    type=int,
+                                    default=3,
+                                    help='Number of columns (default: 3)')
+    load_volume_parser.add_argument('-numrows',
+                                    type=int,
+                                    default=100000,
+                                    help='Number of rows to insert (default: 100000)')
+    load_volume_parser.add_argument('-json',
+                                    action='store_true',
+                                    help="Json table if specified")
 
 
 
@@ -199,6 +225,12 @@ if __name__ == "__main__":
                              num_cols=args.numcols,
                              num_rows=args.numrows,
                              is_json=args.json)
+        elif args.obj_type == 'volume':
+            utils.load_volume_tables(volume_path=args.volumepath,
+                                     num_cfs=args.numcfs,
+                                     num_cols=args.numcols,
+                                     num_rows=args.numrows,
+                                     is_json=args.json)
     # elif args.cmd_name
 
 

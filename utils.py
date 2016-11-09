@@ -27,47 +27,6 @@ g_zfill_width = 5
 g_zfill_repl_width = -5
 
 
-def create_volumes_and_tables(start_idx_vol, num_volumes, start_idx_table, num_tables):
-    list_of_volumes = [g_volume_prefix + str(start_idx_vol + i).zfill(g_zfill_width) for i in range(0, num_volumes)]
-    print list_of_volumes
-
-    for vol in list_of_volumes:
-        print "Creating volume " + vol
-        create_vol_cmd = "maprcli volume create -name " + vol[1:] + " -path " + vol + " -replication 3 -topology /data"
-        print create_vol_cmd
-        os.system(create_vol_cmd)
-
-    list_of_table_names = [g_table_prefix + str(start_idx_table + i).zfill(g_zfill_width) for i in range(0, num_tables)]
-    print list_of_table_names
-
-    list_of_tables = [vol + tab for vol in list_of_volumes for tab in list_of_table_names]
-
-    for table in list_of_tables:
-        create_table_cmd = "maprcli table create -path " + table
-        print create_table_cmd
-        os.system(create_table_cmd)
-
-    return list_of_tables
-
-def create_single_table(table_name):
-    print "Creating single table " + table_name
-    create_cmd = "maprcli table create -path " + table_name
-    os.system(create_cmd)
-
-
-def delete_table(start_idx, num_tables):
-    for i in range(start_idx, start_idx + num_tables):
-        print "Delete table " + g_volume_prefix + g_table_prefix + str(i)
-        create_cmd = "maprcli table delete -path " + g_volume_prefix + g_table_prefix + str(i)
-        os.system(create_cmd)
-
-
-def create_table_load_data(start_idx, num_tables):
-    create_table(start_idx, num_tables)
-
-    for i in range(start_idx, start_idx + num_tables):
-        load_test(g_volume_prefix + g_table_prefix + str(i))
-
 def create_volume(volume_path_prefix, start_idx, num_volumes):
     """
     Creates volume(s) with specified path as prefix.
@@ -83,6 +42,7 @@ def create_volume(volume_path_prefix, start_idx, num_volumes):
         logging.info(create_vol_cmd)
         os.system(create_vol_cmd)
     return list_of_volumes
+
 
 def delete_volume(volume_path_prefix, start_idx, num_volumes):
     """
@@ -100,6 +60,7 @@ def delete_volume(volume_path_prefix, start_idx, num_volumes):
         os.system(delete_vol_cmd)
     return list_of_volumes
 
+
 def create_table(table_path_prefix, start_idx=1, num_tables=1):
     """
     Creates table(s) with specified path as prefix.
@@ -112,11 +73,12 @@ def create_table(table_path_prefix, start_idx=1, num_tables=1):
     list_of_tables = [table_path_prefix + str(start_idx + i).zfill(g_zfill_width) for i in range(0, num_tables)]
     logging.debug(list_of_tables)
     for table_name in list_of_tables:
-        #create_cmd = "maprcli table create -path " + g_volume_prefix + g_table_prefix + str(i).zfill(g_zfill_width)
+        # create_cmd = "maprcli table create -path " + g_volume_prefix + g_table_prefix + str(i).zfill(g_zfill_width)
         create_cmd = "maprcli table create -path " + table_name
         logging.info(create_cmd)
         os.system(create_cmd)
     return list_of_tables
+
 
 def delete_table(table_path_prefix, start_idx=1, num_tables=1):
     """
@@ -135,6 +97,7 @@ def delete_table(table_path_prefix, start_idx=1, num_tables=1):
         os.system(delete_cmd)
     return list_of_tables
 
+
 def autosetup_replica_table(src_table, replica_parent, num_replica=1, is_multimaster=False):
     """
     Sets up replica for a given table. Can specify multimaster option.
@@ -146,24 +109,26 @@ def autosetup_replica_table(src_table, replica_parent, num_replica=1, is_multima
     :return: list of replica tables
     """
     logging.debug("Creating autosetup replica")
-    #Different table name for replica table and multimaster replica table
+    # Different table name for replica table and multimaster replica table
     rtable_prefix = "/rtable" if is_multimaster is False else "/mmrtable"
-    #Remove leading forward slashes if any
+    # Remove leading forward slashes if any
     replica_parent = replica_parent[:-1] if replica_parent[-1:] == '/' else replica_parent
-    #Generate replica table name
+    # Generate replica table name
     src_suffix = src_table.translate(None, '/')
 
-    list_of_replica = [replica_parent + rtable_prefix + src_suffix + "_slave" + str(i+1) for i in range(0, num_replica)]
+    list_of_replica = [replica_parent + rtable_prefix + src_suffix + "_slave" + str(i + 1) for i in
+                       range(0, num_replica)]
     logging.debug(list_of_replica)
 
     for repl_table in list_of_replica:
-        auto_setup_cmd = "maprcli table replica autosetup -path " + src_table + " -replica " + repl_table+ " -directcopy true"
+        auto_setup_cmd = "maprcli table replica autosetup -path " + src_table + " -replica " + repl_table + " -directcopy true"
         if is_multimaster is True:
             auto_setup_cmd += " -multimaster true"
         logging.info(auto_setup_cmd)
-        #os.system(auto_setup_cmd)
+        # os.system(auto_setup_cmd)
 
     return list_of_replica
+
 
 def autosetup_replica_volume(volume_path, replica_parent, num_replica=1, is_multimaster=False):
     """
@@ -179,7 +144,7 @@ def autosetup_replica_volume(volume_path, replica_parent, num_replica=1, is_mult
     logging.info(list_of_tables)
 
     list_of_replica = map(lambda tab: autosetup_replica_table(tab, replica_parent, num_replica, is_multimaster),
-                       list_of_tables)
+                          list_of_tables)
     list_of_replica = [table for sub_list in list_of_replica for table in sub_list]
     logging.info(list_of_replica)
     return list_of_replica
@@ -203,6 +168,7 @@ def get_tables_in_volume(volume_path):
     result_list = result.split()
     return result_list
 
+
 def load_table(table_name, num_cfs=1, num_cols=3, num_rows=100000, is_json=False):
     """
     Uses load test to load data on to the table
@@ -222,101 +188,20 @@ def load_table(table_name, num_cfs=1, num_cols=3, num_rows=100000, is_json=False
     logging.info(load_cmd)
     os.system(load_cmd)
 
-def autosetup_intra_cluster_replica(src_table_name, num_replica):
-    print "Intra cluster replica autosetup"
-    # src_suffix = src_table_name[g_zfill_repl_width:]
-    src_suffix = src_table_name.translate(None, '/')
-    for i in range(0, num_replica):
-        print "Creating Intra cluster replica " + g_local_repltable_prefix + src_suffix + "_" + str(i)
-        auto_setup_cmd = "maprcli table replica autosetup -path " + src_table_name + " -replica " + g_local_repltable_prefix + src_suffix + "_slave" + str(
-            i) + " -directcopy true"
-        print auto_setup_cmd
-        os.system(auto_setup_cmd)
 
-
-def multimaster_autosetup_replica(src_table_name, num_replica):
-    print "Creating multimaster autosetup replica"
-    # src_suffix = src_table_name[g_zfill_repl_width:]
-    src_suffix = src_table_name.translate(None, '/')
-    for i in range(0, num_replica):
-        print "Creating Multimaster replica " + g_replica_path + g_mm_repltable_prefix + src_suffix + "_slave" + str(i)
-        auto_setup_cmd = "maprcli table replica autosetup -path " + src_table_name + " -replica " + g_replica_path + g_mm_repltable_prefix + src_suffix + "_slave" + str(
-            i) + " -directcopy true -multimaster true"
-        print auto_setup_cmd
-        os.system(auto_setup_cmd)
-        # autosetup_replica(src_table_name, num_replica)
-        # src_suffix = src_table_name[-1]
-        # for i in range(0, ((num_replica/2) + 1)):
-        #     auto_setup_cmd = "maprcli table replica autosetup -path " + g_replica_path + g_repltable_prefix + src_suffix + "_" + str(i) + " -replica " + src_table_name + " -directcopy true"
-        #     os.system(auto_setup_cmd)
-
-
-def try_seq_scenario(start_idx, num_tables):
-    for i in range(0, num_tables):
-        curr_table_name = g_volume_prefix + g_table_prefix + str(start_idx + i).zfill(g_zfill_width)
-        create_single_table(curr_table_name)
-        load_test(curr_table_name)
-        #autosetup_replica(curr_table_name, g_num_replica_tables)
-        autosetup_intra_cluster_replica(curr_table_name, g_num_replica_tables)
-        multimaster_autosetup_replica(curr_table_name, g_num_replica_tables)
-
-
-def try_bulk_seq_scenario(start_idx, num_tables):
-    list_of_tables = [g_volume_prefix + g_table_prefix + str(start_idx + i).zfill(g_zfill_width) for i in
-                      range(0, num_tables)]
-    for curr_table_name in list_of_tables:
-        create_single_table(curr_table_name)
-        load_test(curr_table_name)
-
-    for curr_table_name in list_of_tables:
-        #autosetup_replica(curr_table_name, g_num_replica_tables)
-        autosetup_intra_cluster_replica(curr_table_name, g_num_replica_tables)
-        multimaster_autosetup_replica(curr_table_name, g_num_replica_tables)
-
-
-def stress_test_bulk(start_idx_vol, num_volumes, start_idx_table, num_tables):
+def load_volume_tables(volume_path, num_cfs=1, num_cols=3, num_rows=100000, is_json=False):
     """
-    Used for stress / longevity tests. Creates multiple volumes with multiple tables.
-    Replica autosetup for all tables that are created and loaded with data, is done in bulk
-    """
-    list_of_tables = create_volumes_and_tables(start_idx_vol, num_volumes, start_idx_table, num_tables)
-    for table in list_of_tables:
-        load_test(table_name=table)
-
-    for table in list_of_tables:
-        #autosetup_replica(table, g_num_replica_tables)
-        autosetup_intra_cluster_replica(table, g_num_replica_tables)
-        multimaster_autosetup_replica(table, g_num_replica_tables)
-
-
-def stress_test_basic(start_idx_vol, num_volumes, start_idx_table, num_tables):
-    """
-    Used for stress / longevity tests. Creates multiple volumes with multiple tables.
-    Load data and autosetup replica on each table, one by one
-    """
-    list_of_tables = create_volumes_and_tables(start_idx_vol, num_volumes, start_idx_table, num_tables)
-    for table in list_of_tables:
-        load_test(table_name=table)
-        #autosetup_replica(table, g_num_replica_tables)
-        autosetup_intra_cluster_replica(table, g_num_replica_tables)
-        multimaster_autosetup_replica(table, g_num_replica_tables)
-
-
-def autosetup_on_tables_in_volume(volumename):
-    """
-    Do autosetup for all tables in the volume
-    :param volumename: Path of the volume
+    Loads data on to all tables in the volume
+    :param volume_path: name of the volume
+    :param num_cfs: number of cf to put the data across
+    :param num_cols: number of columns in each cf
+    :param num_rows: total number of rows to insert
+    :param is_json: puts data in to json table if specified
     :return:
     """
-    cmd = "hadoop fs -ls " + volumename + " | grep stable | awk \'{print $8}\'"
-    result = subprocess.check_output(cmd, shell=True)
-    result_list = result.split()
-    # for res in result_list:
-        # load_test(res)
-        #autosetup_replica(res, 1)
-
-
-'''Bunch of Utility Methods'''
+    logging.debug("Loading data on to all tables in a volume")
+    map(lambda tab: load_table(tab, num_cfs, num_cols, num_rows, is_json),
+                         get_tables_in_volume(volume_path))
 
 
 def get_replica_stats(srctable, stats):
