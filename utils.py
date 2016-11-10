@@ -12,6 +12,8 @@ import subprocess
 from pprint import pprint
 import logging
 
+import thread
+
 g_volume_prefix = "/dbvolume"
 g_table_prefix = "/stable"
 g_replvolume_prefix = "/replvol"
@@ -25,6 +27,12 @@ g_num_families = 5
 g_num_replica_tables = 1
 g_zfill_width = 5
 g_zfill_repl_width = -5
+
+g_thread_count = 4
+g_all_replica_fields = ['cluster', 'table', 'type', 'realTablePath', 'replicaState', 'paused',
+                        'throttle', 'idx', 'networkencryption', 'synchronous', 'networkcompression',
+                        'isUptodate', 'minPendingTS', 'maxPendingTS', 'bytesPending', 'putsPending',
+                        'bucketsPending', 'uuid', 'copyTableCompletionPercentage']
 
 
 def create_volume(volume_path_prefix, start_idx, num_volumes):
@@ -204,37 +212,88 @@ def load_volume_tables(volume_path, num_cfs=1, num_cols=3, num_rows=100000, is_j
                          get_tables_in_volume(volume_path))
 
 
-def get_replica_stats(srctable, stats):
+def track_replica(table_name, fields):
     """
-    Appends the copytable percentage for replicas of a srctable
-    :param srctable: Source Table
-    :param out_file_path: Path of the output file
+    Tracks status of replica
+
+    :param table_name: name of the table (path)
+    :param fields: filter particular fields
     :return:
     """
 
+    fields_to_track = []
+    fields_not_to_track = []
+    if fields is not None:
+        fields_to_track = fields.split(',')
+        fields_not_to_track = [element for element in g_all_replica_fields if element not in fields]
+        fields_to_track = [element2 for element2 in g_all_replica_fields if element2 not in fields_not_to_track]
+    else:
+        fields_to_track = g_all_replica_fields
+
+    logging.info("Tracking following fields..")
+    logging.info(fields_to_track)
+
     cmd_out = None
-    replicalist_cmd = "maprcli table replica list -path " + srctable + " -json"
-    print replicalist_cmd
+    replicalist_cmd = "maprcli table replica list -path " + table_name + " -json"
+    logging.info(replicalist_cmd)
 
     try:
         cmd_out = subprocess.check_output(replicalist_cmd, shell=True)
     except subprocess.CalledProcessError:
-        print "ERROR:", cmd_out
+        logging.error(cmd_out)
         return
 
     # There was no exception and result is not null
     json_out = json.loads(cmd_out)
 
-    result = "src: " + srctable
-
+    result = "\n\n"
     for data in json_out["data"]:
-        result += ", replica: " + data["table"]
-        result += ", idx: " + data["idx"]
-        for stat in stats:
-            result += ", " + stat + ": " + data[stat]
+        result += "sourceTable: " + table_name
+        for field in fields_to_track:
+            result += ", " + field + ": " + str(data[field])
+        if 'errors' in data:
+            result += ", errors: " + str(data['errors'])
+        result += "\n\n"
 
-        result += "\n"
-        # data = result_json["data"]
-        # for i in xrange(0, len(json_data["data"]))
-        # pprint(json_data)
-        # copytable_percent = json_data["copyTableCompletionPercentage"]
+    print result
+
+
+
+def track_many_table_replica(list_of_tables, fields):
+    """
+
+    :param list_of_tables:
+    :param fields:
+    :return:
+    """
+    logging.debug("Tracking replica for list of tables")
+    for table in list_of_tables:
+        track_replica(table, fields)
+    # map(lambda table: track_replica(table, fields), list_of_tables)
+
+def track_replica_table_in_volume(volume_path, fields):
+    """
+
+    :param volume_path:
+    :param fields:
+    :return:
+    """
+    logging.debug("Tracking replica for tables in volume")
+    list_of_tables = get_tables_in_volume(volume_path)
+    table_list_length = ((len(list_of_tables) + 1) / g_thread_count)
+    list_of_subtables = [list_of_tables[i:i + table_list_length] for i in range(0, len(list_of_tables), table_list_length)]
+    print len(list_of_subtables)
+
+    # try:
+    for i in range(0, len(list_of_subtables)):
+        tables = list_of_subtables[i]
+        print tables
+        thread.start_new_thread(track_many_table_replica, (tables, fields,))
+        # print list_of_subtables[i]
+    # except:
+    #     logging.error("Unable to start threads")
+
+
+
+
+

@@ -174,7 +174,33 @@ if __name__ == "__main__":
                                     action='store_true',
                                     help="Json table if specified")
 
+    #track replica command
+    repl_parser = sub_parsers.add_parser('repltrack',
+                                         help='Track replica of table / tables in a volume')
+    repl_sub_parser = repl_parser.add_subparsers(help='type',
+                                                 dest='obj_type')
 
+    #track replica table command
+    repl_table_parser = repl_sub_parser.add_parser('table',
+                                                   help='Track replica of a table')
+    repl_table_parser.add_argument('-path',
+                                   help='Path of the table',
+                                   required=True,
+                                   type=str)
+    repl_table_parser.add_argument('-filter',
+                                   help='Filter required fields (comma separated)',
+                                   type=str)
+
+    #track replica volume command
+    repl_vol_parser = repl_sub_parser.add_parser('volume',
+                                                   help='Track replica of tables in a volume')
+    repl_vol_parser.add_argument('-path',
+                                   help='Path of the volume',
+                                   required=True,
+                                   type=str)
+    repl_vol_parser.add_argument('-filter',
+                                   help='Filter required fields (comma separated)',
+                                   type=str)
 
     args = parser.parse_args()
     print args
@@ -231,6 +257,15 @@ if __name__ == "__main__":
                                      num_cols=args.numcols,
                                      num_rows=args.numrows,
                                      is_json=args.json)
+    elif args.cmd_name == 'repltrack':
+        logging.debug('Replica status tracking')
+        if args.obj_type == 'table':
+            utils.track_replica(table_name=args.path,
+                                fields=args.filter)
+        elif args.obj_type == 'volume':
+            utils.track_replica_table_in_volume(volume_path=args.path,
+                                                fields=args.filter)
+
     # elif args.cmd_name
 
 
