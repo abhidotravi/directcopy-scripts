@@ -43,7 +43,7 @@ def create_volume(volume_path_prefix, start_idx, num_volumes):
     :param num_volumes: number of volumes to be created
     :return: list of volume paths created
     """
-    list_of_volumes = [volume_path_prefix + str(start_idx + i).zfill(g_zfill_width) for i in range(0, num_volumes)]
+    list_of_volumes = [volume_path_prefix + str(start_idx + i).zfill(g_zfill_width) for i in xrange(0, num_volumes)]
     logging.debug(list_of_volumes)
     for vol in list_of_volumes:
         create_vol_cmd = "maprcli volume create -name " + vol[1:] + " -path " + vol + " -replication 3 -topology /data"
@@ -60,7 +60,7 @@ def delete_volume(volume_path_prefix, start_idx, num_volumes):
     :param num_volumes:
     :return:
     """
-    list_of_volumes = [volume_path_prefix + str(start_idx + i).zfill(g_zfill_width) for i in range(0, num_volumes)]
+    list_of_volumes = [volume_path_prefix + str(start_idx + i).zfill(g_zfill_width) for i in xrange(0, num_volumes)]
     logging.debug(list_of_volumes)
     for vol in list_of_volumes:
         delete_vol_cmd = "maprcli volume remove -name " + vol[1:] + " -force true"
@@ -78,7 +78,7 @@ def create_table(table_path_prefix, start_idx=1, num_tables=1):
     :return: list of table names created
     """
 
-    list_of_tables = [table_path_prefix + str(start_idx + i).zfill(g_zfill_width) for i in range(0, num_tables)]
+    list_of_tables = [table_path_prefix + str(start_idx + i).zfill(g_zfill_width) for i in xrange(0, num_tables)]
     logging.debug(list_of_tables)
     for table_name in list_of_tables:
         # create_cmd = "maprcli table create -path " + g_volume_prefix + g_table_prefix + str(i).zfill(g_zfill_width)
@@ -97,7 +97,7 @@ def delete_table(table_path_prefix, start_idx=1, num_tables=1):
     :return: list of table names deleted
     """
 
-    list_of_tables = [table_path_prefix + str(start_idx + i).zfill(g_zfill_width) for i in range(0, num_tables)]
+    list_of_tables = [table_path_prefix + str(start_idx + i).zfill(g_zfill_width) for i in xrange(0, num_tables)]
     logging.debug(list_of_tables)
     for table_name in list_of_tables:
         delete_cmd = "maprcli table delete -path " + table_name
@@ -125,7 +125,7 @@ def autosetup_replica_table(src_table, replica_parent, num_replica=1, is_multima
     src_suffix = src_table.translate(None, '/')
 
     list_of_replica = [replica_parent + rtable_prefix + src_suffix + "_slave" + str(i + 1) for i in
-                       range(0, num_replica)]
+                       xrange(0, num_replica)]
     logging.debug(list_of_replica)
 
     for repl_table in list_of_replica:
@@ -285,10 +285,10 @@ def get_replica_status_multithread(volume_path, fields):
     logging.debug("Tracking replica for tables in volume")
     list_of_tables = get_tables_in_volume(volume_path)
     table_list_length = ((len(list_of_tables) + 1) / g_thread_count)
-    list_of_subtables = [list_of_tables[i:i + table_list_length] for i in range(0, len(list_of_tables), table_list_length)]
+    list_of_subtables = [list_of_tables[i:i + table_list_length] for i in xrange(0, len(list_of_tables), table_list_length)]
     print len(list_of_subtables)
 
-    threads = [Thread(target=get_replica_status_many, args=(list_of_subtables[i], fields)) for i in range(0, len(list_of_subtables))]
+    threads = [Thread(target=get_replica_status_many, args=(list_of_subtables[i], fields)) for i in xrange(0, len(list_of_subtables))]
     for thread in threads:
         thread.start()
 
