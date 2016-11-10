@@ -260,11 +260,11 @@ if __name__ == "__main__":
     elif args.cmd_name == 'repltrack':
         logging.debug('Replica status tracking')
         if args.obj_type == 'table':
-            utils.track_replica(table_name=args.path,
-                                fields=args.filter)
+            utils.get_replica_status(table_name=args.path,
+                                     fields=args.filter)
         elif args.obj_type == 'volume':
-            utils.track_replica_table_in_volume(volume_path=args.path,
-                                                fields=args.filter)
+            utils.get_replica_status_multithread(volume_path=args.path,
+                                                 fields=args.filter)
 
     # elif args.cmd_name
 

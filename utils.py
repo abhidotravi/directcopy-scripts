@@ -11,8 +11,8 @@ import csv
 import subprocess
 from pprint import pprint
 import logging
+from threading import Thread, Lock
 
-import thread
 
 g_volume_prefix = "/dbvolume"
 g_table_prefix = "/stable"
@@ -212,13 +212,15 @@ def load_volume_tables(volume_path, num_cfs=1, num_cols=3, num_rows=100000, is_j
                          get_tables_in_volume(volume_path))
 
 
-def track_replica(table_name, fields):
+def get_replica_status(table_name, fields):
     """
-    Tracks status of replica
+    Gets status of all replicas of a table
+    User can provide a set of fields that need to be retrieved.
+    By default all fields are displayed
 
     :param table_name: name of the table (path)
-    :param fields: filter particular fields
-    :return:
+    :param fields: filter particular fields from replica status
+    :return: None
     """
 
     fields_to_track = []
@@ -246,52 +248,55 @@ def track_replica(table_name, fields):
     # There was no exception and result is not null
     json_out = json.loads(cmd_out)
 
-    result = "\n\n"
+    result = ""
     for data in json_out["data"]:
         result += "sourceTable: " + table_name
         for field in fields_to_track:
             result += ", " + field + ": " + str(data[field])
         if 'errors' in data:
             result += ", errors: " + str(data['errors'])
-        result += "\n\n"
+        result += "\n"
 
+    #Not using the logging framework here
     print result
 
 
 
-def track_many_table_replica(list_of_tables, fields):
+def get_replica_status_many(list_of_tables, fields):
     """
-
-    :param list_of_tables:
-    :param fields:
-    :return:
+    Same as the above method. But tracks replica status for a list tables provided
+    :param list_of_tables: list of tables for which replica status needs to be tracked
+    :param fields: filter fields
+    :return: None
     """
     logging.debug("Tracking replica for list of tables")
-    for table in list_of_tables:
-        track_replica(table, fields)
-    # map(lambda table: track_replica(table, fields), list_of_tables)
+    map(lambda table: get_replica_status(table, fields), list_of_tables)
 
-def track_replica_table_in_volume(volume_path, fields):
+
+def get_replica_status_multithread(volume_path, fields):
+    """
+    Fetches replica status of all the tables in a volume.
+    To speed up the process, the method spawns multiple threads
+    :param volume_path: volume path
+    :param fields: filter fields
+    :return: None
     """
 
-    :param volume_path:
-    :param fields:
-    :return:
-    """
     logging.debug("Tracking replica for tables in volume")
     list_of_tables = get_tables_in_volume(volume_path)
     table_list_length = ((len(list_of_tables) + 1) / g_thread_count)
     list_of_subtables = [list_of_tables[i:i + table_list_length] for i in range(0, len(list_of_tables), table_list_length)]
     print len(list_of_subtables)
 
-    # try:
-    for i in range(0, len(list_of_subtables)):
-        tables = list_of_subtables[i]
-        print tables
-        thread.start_new_thread(track_many_table_replica, (tables, fields,))
-        # print list_of_subtables[i]
-    # except:
-    #     logging.error("Unable to start threads")
+    threads = [Thread(target=get_replica_status_many, args=(list_of_subtables[i], fields)) for i in range(0, len(list_of_subtables))]
+    for thread in threads:
+        thread.start()
+
+    for thread in threads:
+        thread.join()
+
+    logging.debug("Done")
+
 
 
 
