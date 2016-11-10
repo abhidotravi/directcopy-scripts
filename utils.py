@@ -13,7 +13,6 @@ from pprint import pprint
 import logging
 from threading import Thread, Lock
 
-
 g_volume_prefix = "/dbvolume"
 g_table_prefix = "/stable"
 g_replvolume_prefix = "/replvol"
@@ -58,7 +57,7 @@ def delete_volume(volume_path_prefix, start_idx, num_volumes):
     :param volume_path_prefix:
     :param start_idx:
     :param num_volumes:
-    :return:
+    :return: list of volumes deleted
     """
     list_of_volumes = [volume_path_prefix + str(start_idx + i).zfill(g_zfill_width) for i in xrange(0, num_volumes)]
     logging.debug(list_of_volumes)
@@ -185,7 +184,7 @@ def load_table(table_name, num_cfs=1, num_cols=3, num_rows=100000, is_json=False
     :param num_cols: number of columns in each cf
     :param num_rows: total number of rows to insert
     :param is_json: puts data in to json table if specified
-    :return:
+    :return: None
     """
     logging.debug("Loading data on to table")
     load_cmd = "/opt/mapr/server/tools/loadtest -mode put -table " + table_name \
@@ -205,11 +204,57 @@ def load_volume_tables(volume_path, num_cfs=1, num_cols=3, num_rows=100000, is_j
     :param num_cols: number of columns in each cf
     :param num_rows: total number of rows to insert
     :param is_json: puts data in to json table if specified
-    :return:
+    :return: None
     """
     logging.debug("Loading data on to all tables in a volume")
     map(lambda tab: load_table(tab, num_cfs, num_cols, num_rows, is_json),
-                         get_tables_in_volume(volume_path))
+        get_tables_in_volume(volume_path))
+
+
+def load_many_tables(list_of_tables, num_cfs=1, num_cols=3, num_rows=100000, is_json=False):
+    """
+    Loads data on to all tables provided in the list
+    Faster because of multithreading
+    :param list_of_tables: list of tables
+    :param num_cfs: number of cf to put the data across
+    :param num_cols: number of columns in each cf
+    :param num_rows: total number of rows to insert
+    :param is_json: puts data in to json table if specified
+    :return: None
+    """
+
+    logging.debug("Loading data on to a list of tables")
+    logging.debug(list_of_tables)
+    map(lambda tab: load_table(tab, num_cfs, num_cols, num_rows, is_json), list_of_tables)
+
+
+def load_volume_tables_multithread(volume_path, num_cfs=1, num_cols=3, num_rows=100000, is_json=False):
+    """
+    Loads data on to all tables in the volume.
+    Faster because of multithreading
+    :param volume_path: name of the volume
+    :param num_cfs: number of cf to put the data across
+    :param num_cols: number of columns in each cf
+    :param num_rows: total number of rows to insert
+    :param is_json: puts data in to json table if specified
+    :return: None
+    """
+    logging.debug("Loading data on to all tables in a volume")
+    list_of_tables = get_tables_in_volume(volume_path)
+    table_list_length = ((len(list_of_tables) + 1) / g_thread_count)
+    sublist_of_tables = [list_of_tables[i:i + table_list_length] for i in
+                         xrange(0, len(list_of_tables), table_list_length)]
+    threads = [Thread(target=load_many_tables,
+                      args=(sublist_of_tables[i], num_cfs, num_cols, num_rows, is_json))
+               for i in xrange(0, len(sublist_of_tables))]
+
+    for thread in threads:
+        thread.start()
+
+    for thread in threads:
+        thread.join()
+
+    logging.debug("Done")
 
 
 def get_replica_status(table_name, fields):
@@ -257,9 +302,8 @@ def get_replica_status(table_name, fields):
             result += ", errors: " + str(data['errors'])
         result += "\n"
 
-    #Not using the logging framework here
+    # Not using the logging framework here
     print result
-
 
 
 def get_replica_status_many(list_of_tables, fields):
@@ -270,6 +314,7 @@ def get_replica_status_many(list_of_tables, fields):
     :return: None
     """
     logging.debug("Tracking replica for list of tables")
+    logging.debug(list_of_tables)
     map(lambda table: get_replica_status(table, fields), list_of_tables)
 
 
@@ -285,10 +330,11 @@ def get_replica_status_multithread(volume_path, fields):
     logging.debug("Tracking replica for tables in volume")
     list_of_tables = get_tables_in_volume(volume_path)
     table_list_length = ((len(list_of_tables) + 1) / g_thread_count)
-    list_of_subtables = [list_of_tables[i:i + table_list_length] for i in xrange(0, len(list_of_tables), table_list_length)]
-    print len(list_of_subtables)
+    list_of_subtables = [list_of_tables[i:i + table_list_length] for i in
+                         xrange(0, len(list_of_tables), table_list_length)]
 
-    threads = [Thread(target=get_replica_status_many, args=(list_of_subtables[i], fields)) for i in xrange(0, len(list_of_subtables))]
+    threads = [Thread(target=get_replica_status_many, args=(list_of_subtables[i], fields))
+               for i in xrange(0, len(list_of_subtables))]
     for thread in threads:
         thread.start()
 
@@ -296,9 +342,3 @@ def get_replica_status_multithread(volume_path, fields):
         thread.join()
 
     logging.debug("Done")
-
-
-
-
-
-

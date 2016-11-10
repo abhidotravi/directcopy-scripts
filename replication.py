@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-#Created by aravi
+# Created by aravi
 
 import json
 import os
@@ -13,7 +13,7 @@ import threading
 import argparse
 import utils
 
-logging.basicConfig(level=logging.DEBUG, format='[%(levelname)s] (%(threadName)-10s) %(message)s',)
+logging.basicConfig(level=logging.DEBUG, format='[%(levelname)s] (%(threadName)-10s) %(message)s', )
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -21,13 +21,13 @@ if __name__ == "__main__":
     sub_parsers = parser.add_subparsers(help='command',
                                         dest='cmd_name')
 
-    #create command
+    # create command
     create_parser = sub_parsers.add_parser('create',
                                            help='Create table(s) / volume(s)')
     create_sub_parser = create_parser.add_subparsers(help='type',
                                                      dest='obj_type')
 
-    #create table command
+    # create table command
     create_table_parser = create_sub_parser.add_parser('table',
                                                        help='Create table / tables')
     create_table_parser.add_argument('tableprefix',
@@ -41,7 +41,7 @@ if __name__ == "__main__":
                                      default=1,
                                      help='Start index of table (default: 1)')
 
-    #create volume command
+    # create volume command
     create_vol_parser = create_sub_parser.add_parser('volume',
                                                      help='Create volume / volumes')
     create_vol_parser.add_argument('volumeprefix',
@@ -55,13 +55,13 @@ if __name__ == "__main__":
                                    default=1,
                                    help='Start index of volume (default: 1)')
 
-    #delete command
+    # delete command
     delete_parser = sub_parsers.add_parser('delete',
                                            help='Delete table(s) / volume(s)')
     delete_sub_parser = delete_parser.add_subparsers(help='type',
                                                      dest='obj_type')
 
-    #delete table command
+    # delete table command
     delete_table_parser = delete_sub_parser.add_parser('table',
                                                        help='Delete table / tables')
     delete_table_parser.add_argument('tableprefix',
@@ -75,7 +75,7 @@ if __name__ == "__main__":
                                      default=1,
                                      help='Start index of table (default: 1)')
 
-    #delete volume command
+    # delete volume command
     delete_vol_parser = delete_sub_parser.add_parser('volume',
                                                      help='Delete volume / volumes')
     delete_vol_parser.add_argument('volumeprefix',
@@ -89,13 +89,13 @@ if __name__ == "__main__":
                                    default=1,
                                    help='Start index of volume (default: 1)')
 
-    #autopsetup command
+    # autopsetup command
     autosetup_parser = sub_parsers.add_parser('autosetup',
                                               help='Autosetup replica for table / tables in volume')
     autosetup_sub_parser = autosetup_parser.add_subparsers(help='type',
                                                            dest='obj_type')
 
-    #autosetup table command
+    # autosetup table command
     autosetup_table_parser = autosetup_sub_parser.add_parser('table',
                                                              help='Create autosetup for a table')
     autosetup_table_parser.add_argument('srcpath',
@@ -110,7 +110,7 @@ if __name__ == "__main__":
                                         action='store_true',
                                         help="Multimaster if specified")
 
-    #autosetup volume command
+    # autosetup volume command
     autosetup_vol_parser = autosetup_sub_parser.add_parser('volume',
                                                            help='Create autosetup for tables in a volume')
     autosetup_vol_parser.add_argument('volumepath',
@@ -125,13 +125,13 @@ if __name__ == "__main__":
                                       action='store_true',
                                       help="Multimaster is specified")
 
-    #load command
+    # load command
     load_parser = sub_parsers.add_parser('load',
                                          help='load data on to table / tables in volume')
     load_sub_parser = load_parser.add_subparsers(help='type',
                                                  dest='obj_type')
 
-    #load table command
+    # load table command
     load_table_parser = load_sub_parser.add_parser('table',
                                                    help='Load data on to a table')
     load_table_parser.add_argument('tablename',
@@ -152,8 +152,7 @@ if __name__ == "__main__":
                                    action='store_true',
                                    help="Json table if specified")
 
-
-    #load tables in volume command
+    # load tables in volume command
     load_volume_parser = load_sub_parser.add_parser('volume',
                                                     help='Load data on to tables in a volume')
     load_volume_parser.add_argument('volumepath',
@@ -174,13 +173,13 @@ if __name__ == "__main__":
                                     action='store_true',
                                     help="Json table if specified")
 
-    #track replica command
+    # track replica command
     repl_parser = sub_parsers.add_parser('repltrack',
                                          help='Track replica of table / tables in a volume')
     repl_sub_parser = repl_parser.add_subparsers(help='type',
                                                  dest='obj_type')
 
-    #track replica table command
+    # track replica table command
     repl_table_parser = repl_sub_parser.add_parser('table',
                                                    help='Track replica of a table')
     repl_table_parser.add_argument('-path',
@@ -191,16 +190,16 @@ if __name__ == "__main__":
                                    help='Filter required fields (comma separated)',
                                    type=str)
 
-    #track replica volume command
+    # track replica volume command
     repl_vol_parser = repl_sub_parser.add_parser('volume',
-                                                   help='Track replica of tables in a volume')
+                                                 help='Track replica of tables in a volume')
     repl_vol_parser.add_argument('-path',
-                                   help='Path of the volume',
-                                   required=True,
-                                   type=str)
+                                 help='Path of the volume',
+                                 required=True,
+                                 type=str)
     repl_vol_parser.add_argument('-filter',
-                                   help='Filter required fields (comma separated)',
-                                   type=str)
+                                 help='Filter required fields (comma separated)',
+                                 type=str)
 
     args = parser.parse_args()
     print args
@@ -218,7 +217,7 @@ if __name__ == "__main__":
         else:
             logging.error('Unrecognized object. Cannot create.')
             sys.exit(-1)
-    elif  args.cmd_name == 'delete':
+    elif args.cmd_name == 'delete':
         logging.debug('Delete command')
         if args.obj_type == 'table':
             utils.delete_table(table_path_prefix=args.tableprefix,
@@ -252,11 +251,11 @@ if __name__ == "__main__":
                              num_rows=args.numrows,
                              is_json=args.json)
         elif args.obj_type == 'volume':
-            utils.load_volume_tables(volume_path=args.volumepath,
-                                     num_cfs=args.numcfs,
-                                     num_cols=args.numcols,
-                                     num_rows=args.numrows,
-                                     is_json=args.json)
+            utils.load_volume_tables_multithread(volume_path=args.volumepath,
+                                                 num_cfs=args.numcfs,
+                                                 num_cols=args.numcols,
+                                                 num_rows=args.numrows,
+                                                 is_json=args.json)
     elif args.cmd_name == 'repltrack':
         logging.debug('Replica status tracking')
         if args.obj_type == 'table':
@@ -266,7 +265,4 @@ if __name__ == "__main__":
             utils.get_replica_status_multithread(volume_path=args.path,
                                                  fields=args.filter)
 
-    # elif args.cmd_name
-
-
-
+            # elif args.cmd_name
