@@ -4,28 +4,11 @@
 
 import json
 import os
-import sys
-import argparse
-import re
-import csv
 import subprocess
-from pprint import pprint
 import logging
 from threading import Thread, Lock
 
-g_volume_prefix = "/dbvolume"
-g_table_prefix = "/stable"
-g_replvolume_prefix = "/replvol"
-g_repltable_prefix = g_replvolume_prefix + "/rtable"
-g_local_repltable_prefix = "/dbvolume/lrtable"
-g_mm_repltable_prefix = "/replvol/mmrtable"
-g_replica_path = "/mapr/zoom"
-
-g_default_load_rows = 100000
-g_num_families = 5
-g_num_replica_tables = 1
 g_zfill_width = 5
-g_zfill_repl_width = -5
 
 g_thread_count = 10
 g_all_replica_fields = ['cluster', 'table', 'type', 'realTablePath', 'replicaState', 'paused',
@@ -36,7 +19,7 @@ g_all_replica_fields = ['cluster', 'table', 'type', 'realTablePath', 'replicaSta
 
 def create_volume(volume_path_prefix, start_idx, num_volumes):
     """
-    Creates volume(s) with specified path as prefix.
+    Create volume(s) with specified path as prefix.
     :param volume_path_prefix: volume mount path (will be used as prefix for volume name)
     :param start_idx: start index appended to volume prefix
     :param num_volumes: number of volumes to be created
@@ -53,7 +36,7 @@ def create_volume(volume_path_prefix, start_idx, num_volumes):
 
 def delete_volume(volume_path_prefix, start_idx, num_volumes):
     """
-    Deletes volume(s) with specified path as prefix.
+    Delete volume(s) with specified path as prefix.
     :param volume_path_prefix:
     :param start_idx:
     :param num_volumes:
@@ -70,7 +53,7 @@ def delete_volume(volume_path_prefix, start_idx, num_volumes):
 
 def create_table(table_path_prefix, start_idx=1, num_tables=1):
     """
-    Creates table(s) with specified path as prefix.
+    Create table(s) with specified path as prefix.
     :param table_path_prefix: table path that serves as a prefix
     :param start_idx: start index of table (default = 1)
     :param num_tables: number of table to create (default = 1)
@@ -89,7 +72,7 @@ def create_table(table_path_prefix, start_idx=1, num_tables=1):
 
 def create_table_many(table_path_prefix_list, start_idx=1, num_tables=1):
     """
-    Creates table(s) with specified paths as prefixes.
+    Create table(s) with specified paths as prefixes.
     :param table_path_prefix_list: list of table paths that serve as a prefixes
     :param start_idx: start index of table (default = 1)
     :param num_tables: number of table to create (default = 1)
@@ -100,7 +83,7 @@ def create_table_many(table_path_prefix_list, start_idx=1, num_tables=1):
 
 def create_tables_multithread(table_path_prefix_list, start_idx=1, num_tables=1):
     """
-    Creates table(s) with specified paths as prefixes.
+    Create table(s) with specified paths as prefixes. Faster. Multithreaded
     :param table_path_prefix_list: list of table paths that serve as a prefixes
     :param start_idx: start index of table (default = 1)
     :param num_tables: number of table to create (default = 1)
@@ -127,7 +110,7 @@ def create_tables_multithread(table_path_prefix_list, start_idx=1, num_tables=1)
 
 def delete_table(table_path_prefix, start_idx=1, num_tables=1):
     """
-    Deletes table(s) with specified path as prefix.
+    Delete table(s) with specified path as prefix.
     :param table_path_prefix: table path that serves as a prefix
     :param start_idx: start index of table (default = 1)
     :param num_tables: number of table to create (default = 1)
@@ -355,7 +338,6 @@ def get_replica_status(table_name, fields):
     fields_to_track = []
     fields_not_to_track = []
     if fields is not None:
-        fields_to_track = fields.split(',')
         fields_not_to_track = [element for element in g_all_replica_fields if element not in fields]
         fields_to_track = [element2 for element2 in g_all_replica_fields if element2 not in fields_not_to_track]
     else:
@@ -381,7 +363,12 @@ def get_replica_status(table_name, fields):
     for data in json_out["data"]:
         result += "sourceTable: " + table_name
         for field in fields_to_track:
-            result += ", " + field + ": " + str(data[field])
+            try:
+                field_val = str(data[field])
+                result += ", " + field + ": " + field_val
+            except KeyError:
+                err_msg = "The field: " + field + " does not exist"
+                logging.error(err_msg)
         if 'errors' in data:
             result += ", errors: " + str(data['errors'])
         result += "\n"
@@ -426,5 +413,56 @@ def get_replica_status_multithread(volume_path, fields):
 
     for thread in threads:
         thread.join()
+
+    logging.debug("Done")
+
+
+def do_incremental_setup(volume_list,
+                         src_table_prefix,
+                         num_tables,
+                         start_idx,
+                         num_cfs,
+                         num_cols,
+                         num_rows,
+                         replica_path,
+                         local_path,
+                         num_replica):
+    """
+    Helper method to incrementally create a table, load data and autosetup directcopy
+    :param volume_list: list of volumes
+    :param src_table_prefix: source table prefix
+    :param num_tables: number of tables per volume
+    :param start_idx: start index of table
+    :param num_cfs: number of column families per table
+    :param num_cols: number of columns in a table
+    :param num_rows: number of rows to load in a table
+    :param replica_path: cross-cluster replica path
+    :param local_path: intracluster replica path
+    :param num_replica: number of replica
+    :return: None
+    """
+    table_path_prefix_list = [volume + "/" + src_table_prefix for volume in volume_list]
+    for prefix_path in table_path_prefix_list:
+        for i in xrange(start_idx, start_idx + num_tables):
+            table = create_table(table_path_prefix=prefix_path,
+                                 start_idx=i,
+                                 num_tables=1)
+            table = table[0]
+            load_table(table_name=table,
+                       num_cfs=num_cfs,
+                       num_cols=num_cols,
+                       num_rows=num_rows)
+            autosetup_replica_table(src_table=table,
+                                    replica_parent=replica_path,
+                                    num_replica=num_replica,
+                                    is_multimaster=False)
+            autosetup_replica_table(src_table=table,
+                                    replica_parent=local_path,
+                                    num_replica=num_replica,
+                                    is_multimaster=False)
+            autosetup_replica_table(src_table=table,
+                                    replica_parent=replica_path,
+                                    num_replica=num_replica,
+                                    is_multimaster=True)
 
     logging.debug("Done")
