@@ -12,8 +12,63 @@ import logging
 import threading
 import argparse
 import utils
+import config
 
 logging.basicConfig(level=logging.DEBUG, format='[%(levelname)s] (%(threadName)-10s) %(message)s', )
+
+
+def execute_stress_profile_bulk():
+    logging.debug("Executing bulk profile")
+
+    remote_path = "/"
+    if config.remote_cluster_name is not None:
+        remote_path = "mapr/" + config.remote_cluster_name
+    if config.remote_volume_name is not None:
+        remote_path += "" + config.remote_volume_name
+    local_path = "/"
+    if config.local_replica_volume_name is not None:
+        local_path += config.local_replica_volume_name
+
+    logging.info("Replica path prefix: " + remote_path)
+
+    # Create volumes
+    logging.debug("Creating " + str(config.num_src_vols) + " Volumes.. ")
+    volume_list = utils.create_volume(volume_path_prefix="/" + config.src_volume_prefix,
+                                      num_volumes=config.num_src_vols,
+                                      start_idx=config.vol_start_index)
+
+    # Create tables
+    table_path_prefix_list = [volume + "/" + config.src_table_prefix for volume in volume_list]
+    logging.info(table_path_prefix_list)
+    utils.create_tables_multithread(table_path_prefix_list=table_path_prefix_list,
+                                    num_tables=config.num_src_tables,
+                                    start_idx=config.table_start_index)
+
+    # Load tables
+    for volume in volume_list:
+        utils.load_volume_tables_multithread(volume_path=volume,
+                                             num_cfs=config.num_cfs,
+                                             num_cols=config.num_cols,
+                                             num_rows=config.num_rows,
+                                             is_json=False)
+
+    # Autosetup replica
+    for volume in volume_list:
+        utils.autosetup_replica_table_multithread(volume_path=volume,
+                                                  replica_parent=remote_path,
+                                                  num_replica=config.num_replica,
+                                                  is_multimaster=False)
+
+        utils.autosetup_replica_table_multithread(volume_path=volume,
+                                                  replica_parent=local_path,
+                                                  num_replica=config.num_local,
+                                                  is_multimaster=False)
+
+        utils.autosetup_replica_table_multithread(volume_path=volume,
+                                                  replica_parent=remote_path,
+                                                  num_replica=config.num_replica,
+                                                  is_multimaster=True)
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -201,6 +256,15 @@ if __name__ == "__main__":
                                  help='Filter required fields (comma separated)',
                                  type=str)
 
+    # execute stress profile
+    stress_parser = sub_parsers.add_parser('stress',
+                                           help='Stress reliable replication')
+    stress_sub_parser = stress_parser.add_subparsers(help='Type of stress profile',
+                                                     dest='obj_type')
+    # bulk stress profile
+    stress_bulk_parser = stress_sub_parser.add_parser('bulk',
+                                                      help='Bulk profile of stress')
+
     args = parser.parse_args()
     print args
 
@@ -265,4 +329,7 @@ if __name__ == "__main__":
             utils.get_replica_status_multithread(volume_path=args.path,
                                                  fields=args.filter)
 
-            # elif args.cmd_name
+    elif args.cmd_name == 'stress':
+        logging.debug('Executing stress profile')
+        if args.obj_type == 'bulk':
+            execute_stress_profile_bulk()

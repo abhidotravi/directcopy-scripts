@@ -27,7 +27,7 @@ g_num_replica_tables = 1
 g_zfill_width = 5
 g_zfill_repl_width = -5
 
-g_thread_count = 4
+g_thread_count = 10
 g_all_replica_fields = ['cluster', 'table', 'type', 'realTablePath', 'replicaState', 'paused',
                         'throttle', 'idx', 'networkencryption', 'synchronous', 'networkcompression',
                         'isUptodate', 'minPendingTS', 'maxPendingTS', 'bytesPending', 'putsPending',
@@ -87,6 +87,44 @@ def create_table(table_path_prefix, start_idx=1, num_tables=1):
     return list_of_tables
 
 
+def create_table_many(table_path_prefix_list, start_idx=1, num_tables=1):
+    """
+    Creates table(s) with specified paths as prefixes.
+    :param table_path_prefix_list: list of table paths that serve as a prefixes
+    :param start_idx: start index of table (default = 1)
+    :param num_tables: number of table to create (default = 1)
+    :return: list of table names created
+    """
+    map(lambda table: create_table(table, start_idx, num_tables), table_path_prefix_list)
+
+
+def create_tables_multithread(table_path_prefix_list, start_idx=1, num_tables=1):
+    """
+    Creates table(s) with specified paths as prefixes.
+    :param table_path_prefix_list: list of table paths that serve as a prefixes
+    :param start_idx: start index of table (default = 1)
+    :param num_tables: number of table to create (default = 1)
+    :return: list of table names created
+    """
+    logging.debug("Creating tables from a list of prefixes")
+    prefix_list_length = (len(table_path_prefix_list) + 1) / g_thread_count
+    if prefix_list_length is 0:
+        prefix_list_length = 1
+    sublist_of_prefixes = [table_path_prefix_list[i:i + prefix_list_length] for i in
+                           xrange(0, len(table_path_prefix_list), prefix_list_length)]
+    logging.info(sublist_of_prefixes)
+
+    threads = [Thread(target=create_table_many, args=(sublist_of_prefixes[i], start_idx, num_tables))
+               for i in xrange(0, len(sublist_of_prefixes))]
+    for thread in threads:
+        thread.start()
+
+    for thread in threads:
+        thread.join()
+
+    logging.debug("Done")
+
+
 def delete_table(table_path_prefix, start_idx=1, num_tables=1):
     """
     Deletes table(s) with specified path as prefix.
@@ -132,7 +170,7 @@ def autosetup_replica_table(src_table, replica_parent, num_replica=1, is_multima
         if is_multimaster is True:
             auto_setup_cmd += " -multimaster true"
         logging.info(auto_setup_cmd)
-        # os.system(auto_setup_cmd)
+        os.system(auto_setup_cmd)
 
     return list_of_replica
 
@@ -155,6 +193,50 @@ def autosetup_replica_volume(volume_path, replica_parent, num_replica=1, is_mult
     list_of_replica = [table for sub_list in list_of_replica for table in sub_list]
     logging.info(list_of_replica)
     return list_of_replica
+
+
+def autosetup_many_replica_table(list_of_tables, replica_parent, num_replica=1, is_multimaster=False):
+    """
+    Sets up replica for tables in list. Can specify multimaster option.
+    Replica table name is auto-generated.
+    :param list_of_tables: list of source table path
+    :param replica_parent: path to the parent directory of replica table
+    :param num_replica: number of replicas
+    :param is_multimaster: is it a multimaster replica
+    :return: list of replica tables
+    """
+    logging.debug("Replica autosetup for all tables")
+    map(lambda tab: autosetup_replica_table(tab, replica_parent, num_replica, is_multimaster),
+        list_of_tables)
+
+
+def autosetup_replica_table_multithread(volume_path, replica_parent, num_replica=1, is_multimaster=False):
+    """
+    Autosetup replicas for all tables within a volume. Faster execution - Multithreaded
+    :param volume_path: volume, whose tables should have replica autosetup
+    :param replica_parent: path in which replica tables should be created
+    :param num_replica: number of replicas
+    :param is_multimaster: is it a multimaster replica
+    :return: None
+    """
+    logging.debug("Autosetup for tables in a volume")
+    list_of_tables = get_tables_in_volume(volume_path)
+    table_list_length = ((len(list_of_tables) + 1) / g_thread_count)
+    if table_list_length is 0:
+        table_list_length = 1
+    sublist_of_tables = [list_of_tables[i:i + table_list_length] for i in
+                         xrange(0, len(list_of_tables), table_list_length)]
+    threads = [Thread(target=autosetup_many_replica_table,
+                      args=(sublist_of_tables[i], replica_parent, num_replica, is_multimaster))
+               for i in xrange(0, len(sublist_of_tables))]
+
+    for thread in threads:
+        thread.start()
+
+    for thread in threads:
+        thread.join()
+
+    logging.debug("Done")
 
 
 def get_tables_in_volume(volume_path):
@@ -242,6 +324,8 @@ def load_volume_tables_multithread(volume_path, num_cfs=1, num_cols=3, num_rows=
     logging.debug("Loading data on to all tables in a volume")
     list_of_tables = get_tables_in_volume(volume_path)
     table_list_length = ((len(list_of_tables) + 1) / g_thread_count)
+    if table_list_length is 0:
+        table_list_length = 1
     sublist_of_tables = [list_of_tables[i:i + table_list_length] for i in
                          xrange(0, len(list_of_tables), table_list_length)]
     threads = [Thread(target=load_many_tables,
@@ -330,6 +414,8 @@ def get_replica_status_multithread(volume_path, fields):
     logging.debug("Tracking replica for tables in volume")
     list_of_tables = get_tables_in_volume(volume_path)
     table_list_length = ((len(list_of_tables) + 1) / g_thread_count)
+    if table_list_length is 0:
+        table_list_length = 1
     list_of_subtables = [list_of_tables[i:i + table_list_length] for i in
                          xrange(0, len(list_of_tables), table_list_length)]
 
