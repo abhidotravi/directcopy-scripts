@@ -90,9 +90,9 @@ def create_tables_multithread(table_path_prefix_list, start_idx=1, num_tables=1)
     :return: list of table names created
     """
     logging.debug("Creating tables from a list of prefixes")
-    prefix_list_length = (len(table_path_prefix_list) + 1) / g_thread_count
-    if prefix_list_length is 0:
-        prefix_list_length = 1
+    prefix_list_length = (len(table_path_prefix_list) / g_thread_count) + 1
+    # if prefix_list_length is 0:
+    #     prefix_list_length = 1
     sublist_of_prefixes = [table_path_prefix_list[i:i + prefix_list_length] for i in
                            xrange(0, len(table_path_prefix_list), prefix_list_length)]
     logging.info(sublist_of_prefixes)
@@ -204,9 +204,9 @@ def autosetup_replica_table_multithread(volume_path, replica_parent, num_replica
     """
     logging.debug("Autosetup for tables in a volume")
     list_of_tables = get_tables_in_volume(volume_path)
-    table_list_length = ((len(list_of_tables) + 1) / g_thread_count)
-    if table_list_length is 0:
-        table_list_length = 1
+    table_list_length = (len(list_of_tables) / g_thread_count) + 1
+    # if table_list_length is 0:
+    #     table_list_length = 1
     sublist_of_tables = [list_of_tables[i:i + table_list_length] for i in
                          xrange(0, len(list_of_tables), table_list_length)]
     threads = [Thread(target=autosetup_many_replica_table,
@@ -306,9 +306,9 @@ def load_volume_tables_multithread(volume_path, num_cfs=1, num_cols=3, num_rows=
     """
     logging.debug("Loading data on to all tables in a volume")
     list_of_tables = get_tables_in_volume(volume_path)
-    table_list_length = ((len(list_of_tables) + 1) / g_thread_count)
-    if table_list_length is 0:
-        table_list_length = 1
+    table_list_length = (len(list_of_tables) / g_thread_count) + 1
+    # if table_list_length is 0:
+    #     table_list_length = 1
     sublist_of_tables = [list_of_tables[i:i + table_list_length] for i in
                          xrange(0, len(list_of_tables), table_list_length)]
     threads = [Thread(target=load_many_tables,

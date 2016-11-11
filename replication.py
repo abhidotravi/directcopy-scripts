@@ -99,8 +99,8 @@ def execute_stress_incremental():
                                       start_idx=config.vol_start_index)
 
     get_chunks = lambda l, n: [l[x: x + n] for x in xrange(0, len(l), n)]
-    num_threads = 20
-    volume_sublist = get_chunks(volume_list, num_threads)
+    num_sublist = (len(volume_list) / utils.g_thread_count) + 1
+    volume_sublist = get_chunks(volume_list, num_sublist)
 
     threads = [Thread(target=utils.do_incremental_setup,
                       args=(volume_sublist[i],
